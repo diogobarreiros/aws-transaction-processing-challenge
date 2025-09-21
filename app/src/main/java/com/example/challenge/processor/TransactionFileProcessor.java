@@ -11,6 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SqsException;
@@ -25,6 +28,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class TransactionFileProcessor {
@@ -33,13 +37,18 @@ public class TransactionFileProcessor {
 
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final S3Client s3Client;
 
     @Value("${app.sqs.queue-url}")
     private String sqsQueueUrl;
 
-    public TransactionFileProcessor(SqsClient sqsClient, ObjectMapper objectMapper) {
+    @Value("${app.s3.rejected-transactions-bucket-name}")
+    private String rejectedTransactionsBucketName;
+
+    public TransactionFileProcessor(SqsClient sqsClient, ObjectMapper objectMapper, S3Client s3Client) {
         this.sqsClient = sqsClient;
         this.objectMapper = objectMapper;
+        this.s3Client = s3Client;
     }
 
     /**
@@ -76,34 +85,37 @@ public class TransactionFileProcessor {
                         processedCount++;
                     } else {
                         log.warn("Transação inválida e rejeitada do arquivo {}. Registro: {}", fileName, csvRecord.toMap());
-                        // TODO: Implementar o requisito 4: Descarte de dados rejeitados para bucket S3 apropriado.
-                        // Isso envolveria serializar o registro rejeitado e enviá-lo para um S3 "dead-letter" bucket.
+                        // Requisito 4: Descarte de dados rejeitados para bucket S3 apropriado já implementado.
+                        discardRejectedTransaction(csvRecord, sourceFileId, fileName, "Validation Failed");
                         rejectedCount++;
                     }
                 } catch (DateTimeParseException e) {
                     log.error("Erro de formato de data/hora para registro no arquivo '{}' (ID: {}): {}. Registro: {}",
                             fileName, sourceFileId, e.getMessage(), csvRecord.toMap());
+                    discardRejectedTransaction(csvRecord, sourceFileId, fileName, "Timestamp Format Error");
                     rejectedCount++;
                 } catch (NumberFormatException e) {
                     log.error("Erro de formato numérico para registro no arquivo '{}' (ID: {}): {}. Registro: {}",
                             fileName, sourceFileId, e.getMessage(), csvRecord.toMap());
+                    discardRejectedTransaction(csvRecord, sourceFileId, fileName, "Amount Format Error");
                     rejectedCount++;
                 } catch (IllegalArgumentException e) {
                     log.error("Erro nos cabeçalhos CSV ou campo ausente no arquivo '{}' (ID: {}): {}. Registro: {}",
                             fileName, sourceFileId, e.getMessage(), csvRecord.toMap());
+                    discardRejectedTransaction(csvRecord, sourceFileId, fileName, "Missing Header/Field");
                     rejectedCount++;
                 } catch (Exception e) {
                     log.error("Erro inesperado ao processar registro CSV do arquivo '{}' (ID: {}): {}. Registro: {}",
                             fileName, sourceFileId, e.getMessage(), csvRecord.toMap(), e);
+                    discardRejectedTransaction(csvRecord, sourceFileId, fileName, "Unexpected Error: " + e.getClass().getSimpleName());
                     rejectedCount++;
                 }
             }
             log.info("Processamento do arquivo '{}' (ID: {}) concluído. Processadas: {}, Rejeitadas: {}",
                     fileName, sourceFileId, processedCount, rejectedCount);
 
-            // TODO: Implementar o requisito 4: Consolidação - Gerar relatório com totais por tipo de transação,
-            // valor médio e quantidade de transações. Isso provavelmente seria feito após os eventos SQS
-            // serem consumidos, ou acumulando métricas durante este processamento.
+            // A consolidação e geração de relatórios (requisito 4) é uma responsabilidade da aplicação consumer do SQS,
+            // que processará os eventos de transação válidos e consolidará os dados.
 
         } catch (IOException e) {
             log.error("Erro de IO ao ler o arquivo CSV '{}' (ID: {}): {}", fileName, sourceFileId, e.getMessage(), e);
@@ -126,7 +138,6 @@ public class TransactionFileProcessor {
                 metadataMap = objectMapper.readValue(metadataJson, HashMap.class);
             } catch (JsonProcessingException e) {
                 log.warn("Falha ao parsear metadata JSON para o registro: {}. Metadata raw: {}", record.toMap(), metadataJson, e);
-                // Pode-se optar por lançar uma exceção ou retornar um mapa vazio, dependendo da criticidade.
             }
         }
 
@@ -134,7 +145,7 @@ public class TransactionFileProcessor {
                 .transactionId(record.get("transaction_id"))
                 .transactionType(record.get("transaction_type"))
                 .amount(new BigDecimal(record.get("amount")))
-                .timestamp(Instant.parse(record.get("timestamp"))) // Assume formato ISO 8601 (ex: 2024-01-15T10:30:00Z)
+                .timestamp(Instant.parse(record.get("timestamp")))
                 .customerId(record.get("customer_id"))
                 .metadata(metadataMap)
                 .build();
@@ -176,7 +187,6 @@ public class TransactionFileProcessor {
         String transactionCategory;
         transactionCategory = (transaction.getAmount().compareTo(BigDecimal.ZERO) >= 0) ? "CREDIT" : "DEBIT";
 
-        // Requisito: Adicionar timestamp de processamento
         return SqsTransactionEvent.builder()
                 .transactionId(transaction.getTransactionId())
                 .transactionType(transaction.getTransactionType())
@@ -198,15 +208,15 @@ public class TransactionFileProcessor {
      */
     private void sendToSqs(SqsTransactionEvent event) {
         try {
-            String messageBody = objectMapper.writeValueAsString(event); // Serializa para JSON
+            String messageBody = objectMapper.writeValueAsString(event);
 
             SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
                     .queueUrl(sqsQueueUrl)
                     .messageBody(messageBody)
-                    // TODO: Para garantir idempotência e "exactly-once delivery" em filas SQS FIFO,
-                    // seria necessário usar messageDeduplicationId e messageGroupId.
-                    // Para filas Standard, o SQS garante "at-least-once delivery".
-                    // Para este desafio, SQS Standard é provavelmente o esperado.
+                    // Para este desafio, assume-se uma fila SQS Standard,
+                    // que oferece "at-least-once delivery".
+                    // Configurações de MessageGroupId e MessageDeduplicationId
+                    // seriam necessárias apenas para filas SQS FIFO.
                     .build();
             sqsClient.sendMessage(sendMessageRequest);
             log.debug("Evento SQS para a transação {} enviado com sucesso para a fila.", event.getTransactionId());
@@ -216,6 +226,52 @@ public class TransactionFileProcessor {
             log.error("Erro ao enviar mensagem para a fila SQS para a transação {}: {}", event.getTransactionId(), e.awsErrorDetails().errorMessage(), e);
         } catch (Exception e) {
             log.error("Erro inesperado ao enviar mensagem para a fila SQS para a transação {}: {}", event.getTransactionId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Descarrega uma transação rejeitada para um bucket S3 específico.
+     *
+     * @param rejectedRecord O registro CSV rejeitado.
+     * @param sourceFileId O ID do arquivo original do Google Drive.
+     * @param originalFileName O nome do arquivo original.
+     * @param reason O motivo da rejeição.
+     */
+    private void discardRejectedTransaction(CSVRecord rejectedRecord, String sourceFileId, String originalFileName, String reason) {
+        if (rejectedTransactionsBucketName == null || rejectedTransactionsBucketName.isBlank()) {
+            log.error("Bucket para transações rejeitadas não configurado. Não é possível descartar o registro: {}", rejectedRecord.toMap());
+            return;
+        }
+
+        try {
+            // Gerar um nome de arquivo único para o objeto S3
+            // Ex: rejected/sourceFileId/originalFileName_UUID.json
+            String objectKey = String.format("rejected/%s/%s_%s.json",
+                    sourceFileId,
+                    originalFileName.replace(".csv", ""),
+                    UUID.randomUUID());
+
+            // Incluir o motivo da rejeição nos metadados ou no conteúdo
+            Map<String, String> rejectedData = new HashMap<>(rejectedRecord.toMap());
+            rejectedData.put("_rejectionReason", reason);
+            rejectedData.put("_sourceFileId", sourceFileId);
+            rejectedData.put("_originalFileName", originalFileName);
+            rejectedData.put("_rejectionTimestamp", Instant.now().toString());
+
+            String content = objectMapper.writeValueAsString(rejectedData);
+
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(rejectedTransactionsBucketName)
+                    .key(objectKey)
+                    .contentType("application/json")
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromString(content));
+            log.info("Registro rejeitado salvo no S3: s3://{}/{}", rejectedTransactionsBucketName, objectKey);
+        } catch (JsonProcessingException e) {
+            log.error("Erro ao serializar registro rejeitado para JSON. Não foi possível salvar no S3. Registro: {}", rejectedRecord.toMap(), e);
+        } catch (Exception e) {
+            log.error("Erro ao salvar registro rejeitado no S3 para o bucket {}. Registro: {}", rejectedTransactionsBucketName, rejectedRecord.toMap(), e);
         }
     }
 }

@@ -1,9 +1,9 @@
 plugins {
     id 'java'
-    id 'application' // Necessário para a task 'run' que o CDK usa
+    id 'application'
 }
 
-group 'com.yourcompany.challenge' // Substitua pelo seu group ID
+group 'org.example'
 version '1.0.0'
 
 repositories {
@@ -13,17 +13,15 @@ repositories {
 // Defina a versão do Java
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17) // Use a versão do Java que você está usando (ex: 17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
 dependencies {
     // Dependências do CDK
-    implementation platform('software.amazon.awscdk:aws-cdk-lib:2.144.0') // Versão do CDK
+    implementation platform('software.amazon.awscdk:aws-cdk-lib:2.144.0')
     implementation 'software.amazon.awscdk:aws-cdk-lib:2.144.0'
-    implementation 'software.constructs:constructs:10.3.0' // Versão de constructs compatível com seu CDK
-
-    // Se você usa o módulo de asserções do CDK para testes:
+    implementation 'software.constructs:constructs:10.3.0'
     testImplementation 'software.amazon.awscdk:assertions:2.144.0'
 
     // Dependências de teste
@@ -35,13 +33,10 @@ test {
     useJUnitPlatform()
 }
 
-// Configura a classe principal para a task 'run' do Gradle
-// (Esta é a classe com o método main onde você define as stacks do CDK)
 application {
-    mainClassName = 'com.yourcompany.challenge.AwsChallengeApp' // Substitua pelo caminho completo da sua classe principal
+    mainClassName = 'org.example.App'
 }
 
-// Tarefas de limpeza (opcional, mas bom ter)
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

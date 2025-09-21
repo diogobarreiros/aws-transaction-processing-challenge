@@ -21,5 +21,5 @@ public class SqsTransactionEvent {
     private Map<String, String> transactionMetadata;
     private Instant processingTimestamp;
     private String transactionCategory;
-    private String sourceFileId; // ID do arquivo do Google Drive que originou a transação
+    private String sourceFileId;
 }
