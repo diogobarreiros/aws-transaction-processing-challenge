@@ -1,0 +1,12 @@
+aws_region                                = "us-east-1"
+environment                               = "dev"
+project_name                              = "transaction-processor"
+sqs_queue_name                            = "transaction-events-queue"
+dynamodb_table_name                       = "transaction-processing-processed-files"
+s3_rejected_transactions_bucket_name      = "rejected-data"
+google_drive_secret_name                  = "google-drive-service-account-key"
+app_iam_role_name                         = "transaction-processor-app-role"
+google_drive_service_account_key_json     = <<EOF
+{
+}
+EOF

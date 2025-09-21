@@ -6,6 +6,7 @@ target
 .settings
 .vscode
 *.iml
+terraform.tfvars
 
 # CDK asset staging directory
 .cdk.staging
