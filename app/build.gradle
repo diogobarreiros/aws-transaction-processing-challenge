@@ -34,6 +34,7 @@ dependencies {
     implementation 'software.amazon.awssdk:sqs'
     implementation 'software.amazon.awssdk:dynamodb-enhanced'
     implementation 'software.amazon.awssdk:s3'
+    implementation 'software.amazon.awssdk:ssm'
 
     // CSV Parser
     implementation 'org.apache.commons:commons-csv:1.11.0'

@@ -32,6 +32,7 @@ import software.amazon.awssdk.services.secretsmanager.model.DescribeSecretRespon
 import java.net.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.ssm.SsmClient;
 
 @Configuration
 public class AwsConfig {
@@ -91,6 +92,11 @@ public class AwsConfig {
     @Bean
     public S3Client s3Client() {
         return configureClientBuilder(S3Client.builder()).build();
+    }
+
+    @Bean
+    public SsmClient ssmClient() {
+        return configureClientBuilder(SsmClient.builder()).build();
     }
 
     @Bean
