@@ -1,67 +1,87 @@
-# Variáveis de Configuração Global
+# variables.tf
 variable "aws_region" {
-  description = "A região AWS onde os recursos serão criados."
+  description = "A AWS region to deploy resources into."
   type        = string
   default     = "us-east-1"
 }
 
-variable "environment" {
-  description = "Nome do ambiente (e.g., dev, staging, prod)."
-  type        = string
-  default     = "dev"
-}
-
 variable "project_name" {
-  description = "Nome do projeto para prefixar recursos."
+  description = "A name prefix for all resources."
   type        = string
   default     = "transaction-processor"
 }
 
-# Variáveis para SQS
+variable "vpc_cidr_block" {
+  description = "The CIDR block for the VPC."
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "public_subnet_cidrs" {
+  description = "List of CIDR blocks for public subnets."
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "private_subnet_cidrs" {
+  description = "List of CIDR blocks for private subnets."
+  type        = list(string)
+  default     = ["10.0.101.0/24", "10.0.102.0/24"]
+}
+
+# --- S3 Buckets ---
+variable "s3_input_bucket_name" {
+  description = "Name for the S3 input bucket."
+  type        = string
+  default     = "your-input-bucket-name-12345"
+}
+
+variable "s3_unprocessed_bucket_name" {
+  description = "Name for the S3 unprocessed bucket."
+  type        = string
+  default     = "your-unprocessed-bucket-name-12345"
+}
+
+variable "s3_processed_bucket_name" {
+  description = "Name for the S3 processed bucket."
+  type        = string
+  default     = "your-processed-bucket-name-12345"
+}
+
+# --- SQS Queue ---
 variable "sqs_queue_name" {
-  description = "Nome da fila SQS para eventos de transação."
+  description = "Name for the SQS queue."
   type        = string
   default     = "transaction-events-queue"
 }
 
-# Variáveis para DynamoDB
-variable "dynamodb_table_name" {
-  description = "Nome da tabela DynamoDB para arquivos processados."
+# --- Docker Images (substitua pelas suas!) ---
+variable "app_producer_docker_image" {
+  description = "Docker image URI for the app-producer."
   type        = string
-  default     = "transaction-processing-processed-files"
+  default     = "nginx:latest"
 }
 
-# Variáveis para S3
-variable "s3_rejected_transactions_bucket_name" {
-  description = "Nome do bucket S3 para transações rejeitadas."
+variable "app_consumer_docker_image" {
+  description = "Docker image URI for the app-consumer."
   type        = string
-  default     = "transaction-processing-rejected-data"
+  default     = "busybox:latest"
 }
 
-# Variáveis para Secrets Manager
-variable "google_drive_secret_name" {
-  description = "Nome do Secret no Secrets Manager que guarda as credenciais do Google Drive."
-  type        = string
-  default     = "google-drive-service-account-key"
+variable "fargate_cpu" {
+  description = "CPU units for Fargate tasks (e.g., 256 (.25 vCPU), 512 (.5 vCPU), 1024 (1 vCPU))."
+  type        = number
+  default     = 512
 }
 
-# Variáveis para IAM Role (permissões da aplicação)
-variable "app_iam_role_name" {
-  description = "Nome do IAM Role para a aplicação no EKS."
-  type        = string
-  default     = "transaction-processor-app-role"
+variable "fargate_memory" {
+  description = "Memory (in MiB) for Fargate tasks (e.g., 512, 1024, 2048)."
+  type        = number
+  default     = 1024
 }
 
-# Variável para o conteúdo da chave de serviço do Google Drive.
-variable "google_drive_service_account_key_json" {
-  description = "Conteúdo JSON da chave de serviço do Google Drive. Mantenha isso seguro!"
+variable "google_drive_secret_arn" {
+  description = "The ARN of the Secrets Manager secret for Google Drive service account key."
   type        = string
-  sensitive   = true
-}
-
-# Definição da variável que controla o LocalStack
-variable "localstack_enabled" {
-  description = "Enable LocalStack for local development"
-  type        = bool
-  default     = false
+  default = "arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy-secret-arn-12345"
 }
