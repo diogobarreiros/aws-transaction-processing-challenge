@@ -39,14 +39,18 @@ dependencies {
     // CSV Parser
     implementation 'org.apache.commons:commons-csv:1.11.0'
 
+    implementation 'software.amazon.awssdk:url-connection-client'
+
     // Lombok
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
     // Testes
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.mockito:mockito-core:5.11.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
 }
 
 tasks.withType(JavaCompile).configureEach {

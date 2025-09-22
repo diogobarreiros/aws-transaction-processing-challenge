@@ -1,0 +1,10 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'aws-transaction-processing-challenge'
+include 'app-producer'
+include 'app-consumer'

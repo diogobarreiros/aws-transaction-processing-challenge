@@ -40,14 +40,6 @@ public class GoogleDriveConfig {
     }
 
     @Bean
-    public SecretsManagerClient secretsManagerClient() {
-        return SecretsManagerClient.builder()
-                .region(Region.US_EAST_1)
-                .build();
-    }
-
-
-    @Bean
     public Drive googleDriveService() throws GeneralSecurityException, IOException {
         String secretJson = getGoogleDriveCredentialsFromSecretsManager();
         log.info("Credenciais do Google Drive obtidas do AWS Secrets Manager.");

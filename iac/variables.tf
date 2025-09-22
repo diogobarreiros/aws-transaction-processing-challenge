@@ -59,9 +59,9 @@ variable "google_drive_service_account_key_json" {
   sensitive   = true
 }
 
-# Variável com valor padrão 'false' para não usar LocalStack por padrão
-variable "use_localstack" {
-  description = "Define se o Terraform deve usar o LocalStack como provedor AWS, ou a AWS real."
+# Definição da variável que controla o LocalStack
+variable "localstack_enabled" {
+  description = "Enable LocalStack for local development"
   type        = bool
   default     = false
 }
