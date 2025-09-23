@@ -1,0 +1,14 @@
+Atividades:
+
+Compreensão Inicial do Desafio (Leitura do PDF, Entendimento da Arquitetura): 2 horas
+
+Instalação e Configuração Básica Local (Git, IDE, Java, Maven/Gradle, Docker): 3 horas
+
+Configuração de Credenciais AWS CLI (Erro: No valid credential sources found): 3 horas
+Envolveu gerar chaves IAM no console da AWS e configurar o AWS CLI localmente com aws configure.
+
+Desenvolvimento app-producer: 8 horas
+
+Desenvolvimento app-consumer: 6 horas
+
+Desenvolvimento de Itens da Arquitetura (Diretório iac): 10 horas

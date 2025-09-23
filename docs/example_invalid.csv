@@ -1,0 +1,3 @@
+transaction_id,transaction_type,amount,timestamp,customer_id,metadata
+tx_003,DOC,-75.25,2024-01-15T12:15:00Z,cust_789,"{""channel"":""atm""}"
+tx_004,,10.00,2024-01-15T13:00:00Z,cust_101,{}
