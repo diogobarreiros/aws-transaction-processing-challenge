@@ -29,7 +29,10 @@ dependencies {
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
 
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine")
 }
 
 dependencyManagement {
